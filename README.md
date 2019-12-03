@@ -1,5 +1,4 @@
 # treeclimbR_animation
 
-A [workflowr][] project.
-
-[workflowr]: https://github.com/jdblischak/workflowr
+Candidates at different values of tuning parameter `t`.
+![Alt Text](https://github.com/fionarhuang/treeclimbR_animation/blob/master/output/pk_1.gif)
