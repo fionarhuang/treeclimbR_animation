@@ -47,9 +47,9 @@ p <- p/sum(p)
 names(p) <- tr$tip.label
 
 # simulate counts by sampling from multinomial distribution
-lse <- simMult(pr = p, libSize = 1000, tree = tr, 
+lse <- simMult(pr = p, libSize = 5000, tree = tr, 
                minTip.A = 5, minTip.B = 5,
-               ratio = 3, scenario = "S1",
+               ratio = 2, scenario = "S1",
                nSam = c(10, 10))
 
 ```
@@ -60,7 +60,8 @@ The two signal branches are colored on the tree.
 # signal branches
 br <- metadata(lse)$branch
 br
-viewSim(lse, branch.length = "none", layout = "circular", zoom_scale = 1)
+viewSim(lse, branch.length = "none", layout = "circular", 
+        zoom_scale = 1, size = 1.2)
 ```
 
 
@@ -80,7 +81,7 @@ head(scale_count)
 
 
 # fig: tree 
-fig_0 <- ggtree(tr, branch.length = "none", layout = "circular") +
+fig_0 <- ggtree(tr, branch.length = "none", layout = "circular", size = 1.2) +
     geom_hilight(node = br$A, fill = "orange", alpha = 0.3) +
     geom_hilight(node = br$B, fill = "blue", alpha = 0.3) +
     new_scale_fill()
@@ -109,7 +110,7 @@ colData(tse)
 
 
 # Wilcox sum rank test (optional)
-```{r eval=FALSE}
+```{r}
 # wilcox.test
 test.func <- function (X, Y) {  
     Y <- as.numeric(factor(Y))
@@ -145,6 +146,12 @@ loc <- best$output[best$output$signal.node, ][["node"]]
 loc
 ```
 
+```{r}
+fig_0 +
+  geom_point2(aes(subset = (node %in% loc)), color = "red", size = 5)
+
+```
+
 # edgeR
 ```{r}
 res <- runDA(TSE = tse, feature_on_row = TRUE, 
@@ -178,7 +185,7 @@ loc
 The nodes found are labeled with orange points
 ```{r}
 fig_0 +
-  geom_point2(aes(subset = (node %in% loc)), color = "orange", size = 3)
+  geom_point2(aes(subset = (node %in% loc)), color = "red", size = 5)
 
 ```
 
@@ -240,25 +247,9 @@ pd <- df %>%
     select(threshold, x, y) %>%
     mutate(t = factor(threshold, levels = c("leaf", setdiff(t, "leaf"))))
 
-# pk <- fig_0 + 
-#     geom_point(data = pd, aes(x, y),
-#                color = "red", size = 3) +
-#     theme(plot.title = element_text(size = 25)) +
-# #    transition_time(time = threshold) +
-#     transition_states(states = t, 
-#                       state_length = 8,
-#                       transition_length = 2,
-#                       wrap = FALSE) +
-#     shadow_wake(wake_length = 0.1, alpha = FALSE, 
-#                 wrap = FALSE) +
-#     labs(title = "t = {closest_state}") +
-#     enter_fade() +
-#     exit_fade()
-# 
-# anim_save("output/pk.gif", pk)
 
 
-pk_1 <- fig + 
+pk_S1 <- fig + 
     geom_point(data = pd, aes(x, y),
                color = "navy", size = 4) +
     theme(plot.title = element_text(size = 25)) +
@@ -272,10 +263,10 @@ pk_1 <- fig +
     enter_fade() +
     exit_fade()
 
-anim_save("output/pk_1.gif", pk_1, height = 800, width = 800)
+anim_save("output/pk_S1.gif", pk_S1, height = 800, width = 800)
 ```
 
-![](output/pk_1.gif)
+![](output/pk_S1.gif)
 
 
 ```{r}
