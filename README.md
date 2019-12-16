@@ -3,7 +3,7 @@
 Candidates at different values of tuning parameter `t`.
 1. S1
 
-![Alt Text](https://github.com/fionarhuang/treeclimbR_animation/blob/master/output/pk_1.gif)
+![Alt Text](https://github.com/fionarhuang/treeclimbR_animation/blob/master/output/pk_S1.gif)
 
 
 
