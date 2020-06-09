@@ -8,4 +8,18 @@ editor_options:
   chunk_output_type: console
 ---
 
-Welcome to my research website.
+- [BS](animation_BS.html):
+    - Load packages
+    - Data simulation
+    - Data aggregation
+    - Differential analysis
+    - run treeclimbR
+    - Animation of candidates
+    
+- [SS](animation_SS.html):
+    - Load packages
+    - Data simulation
+    - Data aggregation
+    - Differential analysis
+    - run treeclimbR
+    - Animation of candidates

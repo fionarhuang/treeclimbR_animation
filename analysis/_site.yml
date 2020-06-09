@@ -3,12 +3,15 @@ output_dir: ../docs
 navbar:
   title: "treeclimbR_animation"
   left:
-  - text: Home
-    href: index.html
-  - text: About
-    href: about.html
-  - text: License
-    href: license.html
+  - text: BS
+    href: animation_BS.html
+  - text: SS
+    href: animation_BS.html
+  right:
+  - text: Robinson Lab
+    href: https://robinsonlabuzh.github.io
+  - icon: fa-github
+    href: https://github.com/fionarhuang/treeclimbR
 output:
   workflowr::wflow_html:
     toc: yes
