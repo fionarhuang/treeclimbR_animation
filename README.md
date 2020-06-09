@@ -1,12 +1,13 @@
 # treeclimbR_animation
 
 Candidates at different values of tuning parameter `t`.
-1. S1
 
-![Alt Text](https://github.com/fionarhuang/treeclimbR_animation/blob/master/output/pk_S1.gif)
+1. BS
+
+![Alt Text](https://github.com/fionarhuang/treeclimbR_animation/blob/master/output/pk_BS.gif)
 
 
 
-2. S3
+2. SS
 
-![Alt Text](https://github.com/fionarhuang/treeclimbR_animation/blob/master/output/pk_S3.gif)
+![Alt Text](https://github.com/fionarhuang/treeclimbR_animation/blob/master/output/pk_SS.gif)
