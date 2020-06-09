@@ -1,4 +1,4 @@
-# treeclimbR_animation
+# treeclimbR_animation ([here](https://htmlpreview.github.io/?https://github.com/fionarhuang/treeclimbR_animation/blob/master/docs/index.html))
 
 Candidates at different values of tuning parameter `t`.
 
