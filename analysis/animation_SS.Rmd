@@ -37,11 +37,11 @@ same fold change.
 
 ```{r}
 # generate a random tree
-set.seed(1)
+set.seed(6)
 n <- 100
 tr <- rtree(n)
 
-
+set.seed(2)
 # generate a random probility vector  for leaves
 p <- rbeta(n = n, shape1 = 2, shape2 = 5)
 p <- p/sum(p)
@@ -50,7 +50,8 @@ names(p) <- tr$tip.label
 # # simulate counts by sampling from multinomial distribution
 lse <- simMult(pr = p, libSize = 1000, tree = tr,
                minTip.A = 10, maxTip.A = 20,
-               ratio = 1.5, scenario = "SS",
+               maxTip.B = 30,
+               ratio = 1.8, scenario = "SS",
                nSam = c(10, 10), pct = 0.6)
 
 
@@ -68,6 +69,39 @@ treeFig <- viewSim(lse, branch.length = "none",
                    layout = "circular", zoom_scale = 1, size = 1.1)
 treeFig
 ```
+
+
+```{r}
+
+prettify <- theme_bw(base_size = 13) + theme(
+    panel.spacing = unit(0, "lines"),
+    axis.text = element_text(color = "black"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.key.size= unit(6, "mm"),
+    legend.spacing.x = unit(1, "mm"),
+    plot.title = element_text(hjust = 0.5),
+    legend.text = element_text(size = 9),
+    legend.position="bottom",
+    strip.background = element_rect(colour = "black", fill = "gray90"),
+    strip.text.x = element_text(color = "black", size = 10),
+    strip.text.y = element_text(color = "black", size = 10))
+
+fc <- metadata(lse)$FC
+cp <- cbind.data.frame(proportion = p, fc = fc) %>%
+  arrange(proportion) %>%
+  mutate(Branch = ifelse(fc > 1, "up", ifelse( fc== 1, "same", "down")))
+ggplot(cp) +
+  geom_point(aes(x = proportion, y = log(fc), color = Branch),
+             size = 2) +
+  labs(y = expression(log(p[B]/p[A])),
+       x = expression(p[A])) +
+  scale_color_manual(values = c("up" = "orange", 
+                                "down" = "blue",
+                                "same" = "grey")) +
+  prettify
+
+```
+
 
 
 Simulated counts are scaled and displayed in the heatmap
@@ -95,8 +129,13 @@ fig_0 <- ggtree(tr, branch.length = "none", layout = "circular") +
 vv <- gsub(pattern = "_.*", "", colnames(count))
 names(vv) <- colnames(scale_count)
 fig <- TreeHeatmap(tree = tr, tree_fig = treeFig, hm_data = scale_count,
-                   column_split = vv, rel_width = 0.5, tree_hm_gap = 0.3) +
-    scale_fill_viridis_c(option = "B")
+                   column_split = vv, rel_width = 0.5, tree_hm_gap = 0.6) +
+    scale_fill_viridis_c(option = "B") +
+     #scale_fill_distiller(palette = "BrBG") +
+  theme(legend.key.size= unit(8, "mm"),
+    legend.spacing.x = unit(1, "mm"),
+    plot.title = element_text(hjust = 0.5),
+    legend.text = element_text(size = 11))
 fig
 
 ```
@@ -133,19 +172,19 @@ Y <- colData(tse)$group
 X <- assays(tse)[[1]]
 resW <- test.func(X,Y)
 outW <- data.frame(node = rowLinks(tse)$nodeNum,
-                   pvalue = resW$p.value,
+                   PValue = resW$p.value,
                    sign = resW$e.sign)
 
 ### run treeclimbR
 # get candidates
 cand <- getCand(tree = rowTree(tse), score_data = outW, 
-                node_column = "node", p_column = "pvalue",
+                node_column = "node", p_column = "PValue",
                 sign_column = "sign", message = TRUE)
 
 # evaluate candidates
 best <- evalCand(tree = rowTree(tse), levels = cand$candidate_list, 
                  score_data = outW, node_column = "node",
-                 p_column = "pvalue", sign_column = "sign")
+                 p_column = "PValue", sign_column = "sign")
 
 infoCand(best)
 
@@ -154,43 +193,6 @@ loc <- best$output[best$output$signal.node, ][["node"]]
 loc
 ```
 
-```{r}
-treeFig +
-  geom_point2(aes(subset = (node %in% loc)), color = "red", size = 5)
-
-```
-
-## option 2: edgeR
-```{r}
-res <- runDA(TSE = tse, feature_on_row = TRUE, 
-             filter_min_count = 0, 
-             design_terms = "group", normalize = FALSE)
-out <- nodeResult(object = res, n = Inf)
-head(out)
-dim(out)
-```
-
-# Run `treeclimbR`
-```{r}
-# treeclimbR
-cand <- getCand(tree = rowTree(tse), score_data = out, 
-                node_column = "node", p_column = "PValue",
-                sign_column = "logFC", message = TRUE)
-
-best <- evalCand(tree = rowTree(tse), levels = cand$candidate_list, 
-                 score_data = out, node_column = "node",
-                 sign_column = "logFC",
-                 p_column = "PValue")
-infoCand(best)
-
-loc <- best$output[best$output$signal.node, ][["node"]]
-loc
-
-```
-
-
-
-The nodes found are labeled with orange points
 ```{r}
 treeFig +
   geom_point2(aes(subset = (node %in% loc)), color = "red", size = 5)
@@ -243,26 +245,158 @@ for (j in seq_len(nt)) {
 nn <- lapply(seq_len(ncol(mm)), FUN = function(x) {
     mx <- mm[, x]
     xx <- nodL[[x]][mx]
-    cbind.data.frame(xx, rep(t[x], length(xx)), 
+    # rejected nodes
+    rx <- match(xx, outW$node)
+    px <- p.adjust(outW$PValue[rx], method = "BH") <= 0.05
+    cbind.data.frame(xx, rep(t[x], length(xx)), px,
                      stringsAsFactors = FALSE)
 })
 
 df <- do.call(rbind.data.frame, nn)
-colnames(df) <- c("node", "threshold")
+colnames(df) <- c("node", "threshold", "reject_H0")
 head(df)
 
 pd <- df %>%
-    left_join(y = fig_0$data, by = "node") %>%
-    select(threshold, x, y) %>%
+    left_join(y = fig_0$data, by = "node") %>% 
+    select(threshold, x, y, reject_H0) %>%
+    mutate(reject_H0 = ifelse(is.na(reject_H0), FALSE, reject_H0)) %>%
     mutate(t = factor(threshold, levels = t))
+head(pd)
 
+pk_SS_ws <- fig + 
+    new_scale_fill() +
+    geom_point(data = pd, aes(x, y, fill = reject_H0),
+               color = "navy", size = 4, shape = 21) +
+    scale_fill_manual(values = c(`TRUE` = "red", `FALSE` = NA)) +
+    theme(plot.title = element_text(size = 25),
+          legend.text = element_text(size = 15),
+          legend.title = element_text(size = 18)) +
+    transition_states(states = t, 
+                      state_length = 25,
+                      transition_length = 2,
+                      wrap = FALSE) +
+    #shadow_wake(wake_length = 0.1, alpha = FALSE, 
+                #wrap = FALSE) +
+    labs(title = "t = {closest_state}") +
+    enter_fade() +
+    exit_fade()
+
+#anim_save("output/pk_SS.gif", pk_S3, height = 800, width = 800)
+
+animate(pk_SS_ws, duration = 30, fps = 5, width = 800, height = 800, renderer = gifski_renderer())
+anim_save("output/pk_SS_ws.gif")
+```
+
+![](output/pk_SS.gif)
+## option 2: edgeR
+```{r}
+res <- runDA(TSE = tse, feature_on_row = TRUE, 
+             filter_min_count = 0, 
+             design_terms = "group", normalize = FALSE)
+out <- nodeResult(object = res, n = Inf)
+head(out)
+dim(out)
+```
+
+# Run `treeclimbR`
+```{r}
+# treeclimbR
+cand <- getCand(tree = rowTree(tse), score_data = out, 
+                node_column = "node", p_column = "PValue",
+                sign_column = "logFC", message = TRUE)
+
+best <- evalCand(tree = rowTree(tse), levels = cand$candidate_list, 
+                 score_data = out, node_column = "node",
+                 sign_column = "logFC",
+                 p_column = "PValue")
+infoCand(best)
+
+loc <- best$output[best$output$signal.node, ][["node"]]
+loc
+
+```
+
+
+
+The nodes found are labeled with orange points
+```{r}
+treeFig +
+  geom_point2(aes(subset = (node %in% loc)), color = "red", size = 5)
+
+```
+
+# Animation 
+
+We show the searching process of candidates with animation. The chunk below is slow when knit to html. It would be faster to directly run code in console,  save the `.gtf` file and knit by directly include the `gtf` file.
+
+```{r message = FALSE, warning = FALSE, results = FALSE, eval= TRUE}
+# tree
+tree <- rowTree(tse)
+leaf <- showNode(tree = tree, only.leaf = TRUE)
+nleaf <- length(leaf)
+
+# the candidate list
+nodL <- cand_0$candidate_list
+t <- names(nodL)
+nt <- length(nodL)
+mm <- matrix(NA, nrow = nleaf, ncol = nt)
+colnames(mm) <- paste("row_", seq_len(nt), sep = "")
+
+#
+path <- matTree(tree = tree)
+r1 <- lapply(leaf, FUN = function(x) {
+    which(path == x, arr.ind = TRUE)[, "row"]
+})
+
+for (j in seq_len(nt)) {
+    rj <- lapply(nodL[[j]], FUN = function(x) {
+        which(path == x, arr.ind = TRUE)[, "row"]
+    })
+    
+    for (i in seq_len(nleaf)) {
+        # leaf i: which row of `path`   
+        ni <- r1[[i]]
+        ul <- lapply(rj, FUN = function(x) {
+            any(ni %in% x)
+        })
+        
+        # the ancestor of leaf i: which node in candidate j
+        ll <- which(unlist(ul))
+        if (length(ll) == 1) {
+            mm[i, j] <- ll
+        }
+    }}
+
+
+nn <- lapply(seq_len(ncol(mm)), FUN = function(x) {
+    mx <- mm[, x]
+    xx <- nodL[[x]][mx]
+    # rejected nodes
+    rx <- match(xx, outW$node)
+    px <- p.adjust(outW$PValue[rx], method = "BH") <= 0.05
+    cbind.data.frame(xx, rep(t[x], length(xx)), px,
+                     stringsAsFactors = FALSE)
+})
+
+df <- do.call(rbind.data.frame, nn)
+colnames(df) <- c("node", "threshold", "reject_H0")
+head(df)
+
+pd <- df %>%
+    left_join(y = fig_0$data, by = "node") %>% 
+    select(threshold, x, y, reject_H0) %>%
+    mutate(reject_H0 = ifelse(is.na(reject_H0), FALSE, reject_H0)) %>%
+    mutate(t = factor(threshold, levels = t))
+head(pd)
 
 pk_S3 <- fig + 
-    geom_point(data = pd, aes(x, y),
-               color = "navy", size = 4) +
+    new_scale_fill() +
+    geom_point(data = pd, aes(x, y, fill = reject_H0),
+               color = "navy", size = 4, shape = 21) +
+    scale_fill_manual(values = c(`TRUE` = "red", `FALSE` = NA)) +
     theme(plot.title = element_text(size = 25)) +
     transition_states(states = t, 
-                      state_length = 8,
+                      state_length = 25,
                       transition_length = 2,
                       wrap = FALSE) +
     shadow_wake(wake_length = 0.1, alpha = FALSE, 
@@ -271,7 +405,10 @@ pk_S3 <- fig +
     enter_fade() +
     exit_fade()
 
-anim_save("output/pk_SS.gif", pk_S3, height = 800, width = 800)
+#anim_save("output/pk_SS.gif", pk_S3, height = 800, width = 800)
+
+animate(pk_S3, duration = 30, fps = 5, width = 600, height = 600, renderer = gifski_renderer())
+anim_save("output/pk_SS.gif")
 ```
 
 ![](output/pk_SS.gif)
